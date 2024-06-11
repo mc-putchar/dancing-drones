@@ -1,0 +1,4 @@
+[submodule "pseyepy"]
+	path = deps/psyeyepy
+	url = https://github.com/bensondaled/pseyepy.git
+	branch = master
