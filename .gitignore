@@ -5,6 +5,8 @@
 /.pnp
 .pnp.js
 .venv
+esp32
+cam_calibration
 
 # testing
 /coverage

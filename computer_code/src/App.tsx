@@ -345,7 +345,7 @@ export default function App() {
     <Container fluid>
       <Row className="mt-3 mb-3 flex-nowrap" style={{ alignItems: 'center' }}>
         <Col className="ms-4" style={{ width: 'fit-content' }} md="auto">
-          <h2>MoCap</h2>
+          <h2>Dancing drones</h2>
         </Col>
         <Col>
           <Toolbar />

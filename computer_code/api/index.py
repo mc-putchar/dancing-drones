@@ -11,18 +11,60 @@ from flask_socketio import SocketIO
 import copy
 import time
 import serial
+import sys
+import glob
 import threading
 from ruckig import InputParameter, OutputParameter, Result, Ruckig
 from flask_cors import CORS
-import json
 
-serialLock = threading.Lock()
+def get_serial_ports():
+    """ https://stackoverflow.com/questions/12090503/listing-available-com-ports-with-python
+        Lists serial port names
+        :raises EnvironmentError:
+            On unsupported or unknown platforms
+        :returns:
+            A list of the serial ports available on the system
+    """
+    if sys.platform.startswith('win'):
+        ports = ['COM%s' % (i + 1) for i in range(256)]
+    elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+        # this excludes your current terminal "/dev/tty"
+        ports = glob.glob('/dev/tty[A-Za-z]*')
+    elif sys.platform.startswith('darwin'):
+        ports = glob.glob('/dev/cu.usb*')
+    else:
+        raise EnvironmentError('Unsupported platform')
 
-ser = serial.Serial("/dev/cu.usbserial-02X2K2GE", 1000000, write_timeout=1, )
+    result = []
+    for port in ports:
+        try:
+            s = serial.Serial(port)
+            s.close()
+            result.append(port)
+        except (OSError, serial.SerialException):
+            pass
+    return result
+
+def serial_worker():
+    global ser
+    serial_ports = get_serial_ports()
+    for port in serial_ports:
+        print(" port: " + str(port))
+    try:
+        with serialLock:
+            ser = serial.Serial(serial_ports[0], 1000000, write_timeout=1)
+    except Exception as e:
+        print(f"Serial exception: {e}")
+
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
+# socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading')
 socketio = SocketIO(app, cors_allowed_origins='*')
+
+serialLock = threading.Lock()
+ser = None
+# ser = serial.Serial("/dev/ttyUSB0", 1000000, write_timeout=1, )
 
 cameras_init = False
 
@@ -53,7 +95,7 @@ def camera_stream():
                 time.sleep(last_run_time - time_now + loop_interval)
             last_run_time = time.time()
             frames = cameras.get_frames()
-            jpeg_frame = cv.imencode('.jpg', frames)[1].tostring()
+            jpeg_frame = cv.imencode('.jpg', frames)[1].tobytes()
 
             yield (b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + jpeg_frame + b'\r\n')
@@ -124,7 +166,7 @@ def arm_drone(data):
         }
         with serialLock:
             ser.write(f"{str(droneIndex)}{json.dumps(serial_data)}".encode('utf-8'))
-        
+
         time.sleep(0.01)
 
 @socketio.on("set-drone-pid")
@@ -324,4 +366,10 @@ def live_mocap(data):
 
 
 if __name__ == '__main__':
+
+    # serial_thread = threading.Thread(target=serial_worker)
+    # serial_thread.daemon = True
+    # serial_thread.start()
+
+    # socketio.run(app, port=3001, debug=True, use_reloader=False)
     socketio.run(app, port=3001, debug=True)

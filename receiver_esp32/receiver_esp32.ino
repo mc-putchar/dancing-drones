@@ -59,25 +59,22 @@ PID xVelPID(&xVel, &xVelOutput, &xVelSetpoint, xyVelKp, xyVelKi, xyVelKd, DIRECT
 PID yVelPID(&yVel, &yVelOutput, &yVelSetpoint, xyVelKp, xyVelKi, xyVelKd, DIRECT);
 PID zVelPID(&zVel, &zVelOutput, &zVelSetpoint, zVelKp, zVelKi, zVelKd, DIRECT);
 
-
 unsigned long lastLoopTime = micros();
 unsigned long lastSbusSend = micros();
 float loopFrequency = 2000.0;
 float sbusFrequency = 50.0;
 
-#if DRONE_INDEX == 0
-  uint8_t newMACAddress[] = { 0xC0, 0x4E, 0x30, 0x4B, 0x61, 0x3A };
-#elif DRONE_INDEX == 1
-  uint8_t newMACAddress[] = { 0xC0, 0x4E, 0x30, 0x4B, 0x80, 0x3B };
-#endif
+// uint8_t mac_addr[6] = { 0xC0, 0x4E, 0x30, 0x4B, 0x61, 0x3A };
+uint8_t mac_addr[6] = { 0x08, 0xB6, 0x1F, 0xBC, 0x8E, 0x9B };
 
-// callback function that will be executed when data is received
-void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
-  // Serial.println((char*)incomingData);
+// Callback function that will be executed when data is received
+void data_recv_cb(const esp_now_recv_info_t *info, const uint8_t *incomingData, int len) {
+  Serial.println("Recv data:");
+  Serial.println((char*)incomingData);
   DeserializationError err = deserializeJson(json, (char *)incomingData);
 
   if (err) {
-    Serial.print("failed to parse json");
+    Serial.println("failed to parse json");
     return;
   }
 
@@ -127,6 +124,18 @@ void resetPid(PID &pid, double min, double max) {
   pid.SetOutputLimits(min, max);
 }
 
+void readMacAddress(){
+  uint8_t baseMac[6];
+  esp_err_t ret = esp_wifi_get_mac(WIFI_IF_STA, baseMac);
+  if (ret == ESP_OK) {
+    Serial.printf("%02x:%02x:%02x:%02x:%02x:%02x\n",
+                  baseMac[0], baseMac[1], baseMac[2],
+                  baseMac[3], baseMac[4], baseMac[5]);
+  } else {
+    Serial.println("Failed to read MAC address");
+  }
+}
+
 void setup() {
   // Initialize Serial Monitor
   Serial.begin(115200);
@@ -149,7 +158,7 @@ void setup() {
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   esp_wifi_init(&cfg);
   esp_wifi_set_mode(WIFI_MODE_STA);
-  esp_wifi_set_mac(WIFI_IF_STA, &newMACAddress[0]);
+  esp_wifi_set_mac(WIFI_IF_STA, mac_addr);
   esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   esp_wifi_set_ps(WIFI_PS_NONE);
@@ -164,10 +173,10 @@ void setup() {
   esp_wifi_config_espnow_rate(WIFI_IF_STA, WIFI_PHY_RATE_24M);
   esp_wifi_start();
 
-  // Once ESPNow is successfully Init, we will register for recv CB to
-  // get recv packer info
-  esp_now_register_recv_cb(OnDataRecv);
+  // Register the receive callback
+  esp_now_register_recv_cb(data_recv_cb);
 
+  readMacAddress();
 
   xPosPID.SetMode(AUTOMATIC);
   yPosPID.SetMode(AUTOMATIC);
@@ -196,10 +205,10 @@ void setup() {
 
   EEPROM.begin(EEPROM_SIZE);
 
-  // xTrim = EEPROM.read(0);
-  // yTrim = EEPROM.read(1);
-  // zTrim = EEPROM.read(2);
-  // yawTrim = EEPROM.read(3);
+  xTrim = EEPROM.read(0);
+  yTrim = EEPROM.read(1);
+  zTrim = EEPROM.read(2);
+  yawTrim = EEPROM.read(3);
 
   lastPing = micros();
   lastLoopTime = micros();
@@ -250,10 +259,9 @@ void loop() {
   if (micros() - lastSbusSend > 1e6 / sbusFrequency) {
     lastSbusSend = micros();
     // Serial.printf("PWM x: %d, y: %d, z: %d, yaw: %d\nPos x: %f, y: %f, z: %f, yaw: %f\n", xPWM, yPWM, zPWM, yawPWM, xVel, yVel, zPos, yawPos);
-    // Serial.printf("Setpoint x: %f, y: %f, z: %f\n", xVelSetpoint, yVelSetpoint, zVelSetpoint);
+    Serial.printf("Setpoint x: %f, y: %f, z: %f\n", xVelSetpoint, yVelSetpoint, zVelSetpoint);
     // Serial.printf("Pos x: %f, y: %f, z: %f\n", xVel, yVel, zPos);
-    //Serial.printf("Output x: %f, y: %f, z: %f\n", xVelOutput, yVelOutput, zVelOutput);
-
+    // Serial.printf("Output x: %f, y: %f, z: %f\n", xVelOutput, yVelOutput, zVelOutput);
     sbus_tx.data(data);
     sbus_tx.Write();
   }

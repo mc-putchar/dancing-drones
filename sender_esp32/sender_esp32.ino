@@ -3,8 +3,8 @@
 #include <WiFi.h>
 
 uint8_t broadcastAddresses[][6] = {
-  { 0xC0, 0x4E, 0x30, 0x4B, 0x61, 0x3A },
-  { 0xC0, 0x4E, 0x30, 0x4B, 0x80, 0x3B },
+  { 0x08, 0xB6, 0x1F, 0xBC, 0x8E, 0x9B },
+  { 0x08, 0xB6, 0x1F, 0xBC, 0x8E, 0x9C },
 };
 
 esp_now_peer_info_t peerInfo;
@@ -76,13 +76,12 @@ void loop() {
     buffer[availableBytes-1] = '\0';
     Serial.printf("\n drone index %d: ", droneIndex);
     Serial.print(buffer);
-
-    esp_err_t result = esp_now_send(broadcastAddresses[droneIndex], (uint8_t *)&buffer, strlen(buffer) + 1);
+    esp_err_t result = esp_now_send(broadcastAddresses[0], (uint8_t *)&buffer, 10);
     if (result) {
       Serial.println(esp_err_to_name(result));
     }
-  }
-  else {
-    yield();
+    else {
+      yield();
+    }
   }
 }
