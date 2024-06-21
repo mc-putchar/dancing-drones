@@ -9,10 +9,9 @@ import os
 import time
 import numpy as np
 import cv2 as cv
-from KalmanFilter import KalmanFilter
 from pseyepy import Camera
+from KalmanFilter import KalmanFilter
 from Singleton import Singleton
-
 
 @Singleton
 class Cameras:
@@ -45,9 +44,6 @@ class Cameras:
         self.ser = None
 
         self.serialLock = None
-
-        global cameras_init
-        cameras_init = True
 
     def set_socketio(self, socketio):
         self.socketio = socketio
@@ -328,7 +324,7 @@ def motion_from_essential(E: np.ndarray) -> Tuple[List[np.ndarray], List[np.ndar
     """
     assert E.shape == (3, 3), "Essential matrix must be 3x3."
 
-    _, R1, R2, t = cv.decomposeEssentialMat(E)
+    R1, R2, t = cv.decomposeEssentialMat(E)
 
     rotations_matrices = [R1, R1, R2, R2]
     translations = [t, -t, t, -t]

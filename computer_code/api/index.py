@@ -59,16 +59,16 @@ def serial_worker():
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
-# socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading')
-socketio = SocketIO(app, cors_allowed_origins='*')
+socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading')
+# socketio = SocketIO(app, cors_allowed_origins='*')
 
 serialLock = threading.Lock()
-ser = None
-# ser = serial.Serial("/dev/ttyUSB0", 1000000, write_timeout=1, )
+# ser = None
+ser = serial.Serial("/dev/ttyUSB0", 1000000, write_timeout=1, )
 
 cameras_init = False
 
-num_objects = 2
+num_objects = 1
 
 @app.route("/api/camera-stream")
 def camera_stream():
@@ -77,6 +77,8 @@ def camera_stream():
     cameras.set_ser(ser)
     cameras.set_serialLock(serialLock)
     cameras.set_num_objects(num_objects)
+    global cameras_init
+    cameras_init = True
     
     def gen(cameras):
         frequency = 150
@@ -158,7 +160,7 @@ def arm_drone(data):
     global cameras_init
     if not cameras_init:
         return
-    
+
     Cameras.instance().drone_armed = data["droneArmed"]
     for droneIndex in range(0, num_objects):
         serial_data = {
