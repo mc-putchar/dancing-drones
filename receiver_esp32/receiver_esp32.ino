@@ -12,7 +12,7 @@
 #define ROTOR_RADIUS 0.0225
 #define Z_GAIN 0.7
 
-#define DRONE_INDEX 1
+#define DRONE_INDEX 0
 
 #define EEPROM_SIZE 4
 
@@ -64,19 +64,26 @@ unsigned long lastSbusSend = micros();
 float loopFrequency = 2000.0;
 float sbusFrequency = 50.0;
 
-// uint8_t mac_addr[6] = { 0xC0, 0x4E, 0x30, 0x4B, 0x61, 0x3A };
-uint8_t mac_addr[6] = { 0x08, 0xB6, 0x1F, 0xBC, 0x8E, 0x9B };
+#if DRONE_INDEX == 0
+  uint8_t mac_addr[6] = { 0x08, 0xB6, 0x1F, 0xBC, 0x8E, 0x9B };
+#elif DRONE_INDEX == 1
+  uint8_t mac_addr[6] = { 0x08, 0xB6, 0x1F, 0xBC, 0x8E, 0x9C };
+#endif
 
 // Callback function that will be executed when data is received
 void data_recv_cb(const esp_now_recv_info_t *info, const uint8_t *incomingData, int len) {
-  Serial.println("Recv data:");
-  Serial.println((char*)incomingData);
-  DeserializationError err = deserializeJson(json, (char *)incomingData);
+  // Serial.printf("Recv %d data: ", len);
+  // Serial.write(incomingData, len);
+  // Serial.println();
+
+  DeserializationError err = deserializeJson(json, (const char *)incomingData);
 
   if (err) {
     Serial.println("failed to parse json");
     return;
   }
+
+  serializeJsonPretty(json, Serial);
 
   if (json.containsKey("pos") && json.containsKey("vel")) {
     xPos = json["pos"][0];
@@ -248,9 +255,9 @@ void loop() {
   int yPWM = 992 + (yVelOutput * 811) + yTrim;
   int zPWM = 992 + (Z_GAIN * zVelOutput * 811) + zTrim;
   int yawPWM = 992 + (yawPosOutput * 811) + yawTrim;
-  double groundEffectMultiplier = 1 - groundEffectCoef*pow(((2*ROTOR_RADIUS) / (4*(zPos-groundEffectOffset))), 2);
-  zPWM *= max(0., groundEffectMultiplier);
-  zPWM = armed && millis() - timeArmed > 100 ? zPWM : 172;
+  // double groundEffectMultiplier = 1 - groundEffectCoef*pow(((2*ROTOR_RADIUS) / (4*(zPos-groundEffectOffset))), 2);
+  // zPWM *= max(0., groundEffectMultiplier);
+  zPWM = armed && millis() - timeArmed > 100 ? zPWM : 185;
   data.ch[0] = -yPWM;
   data.ch[1] = xPWM;
   data.ch[2] = zPWM;
