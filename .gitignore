@@ -5,18 +5,17 @@
 /.pnp
 .pnp.js
 .venv
-esp32
-cam_calibration
 
 # testing
 /coverage
+cam_calibration/cam*
 
 # next.js
 /.next/
 /out/
 
 # production
-/build
+build
 
 # misc
 .DS_Store
@@ -37,3 +36,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 __pycache__
+
+# esp-idf
+sdkconfig
+sdkconfig.old
+.cache
+.devcontainer
+.vscode

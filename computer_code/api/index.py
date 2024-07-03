@@ -63,8 +63,12 @@ socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading')
 # socketio = SocketIO(app, cors_allowed_origins='*')
 
 serialLock = threading.Lock()
-# ser = None
-ser = serial.Serial("/dev/ttyUSB0", 1000000, write_timeout=1, )
+ports = get_serial_ports()
+if not ports:
+    print('No USB serial connection recognized')
+    ser = None
+else:
+    ser = serial.Serial(ports[0], 1000000, write_timeout=1, )
 
 cameras_init = False
 
@@ -219,7 +223,6 @@ def acquire_floor(data):
     plane_normal = np.array([[fit[0]], [fit[1]], [-1]])
     plane_normal = plane_normal / linalg.norm(plane_normal)
     up_normal = np.array([[0],[0],[1]], dtype=np.float32)
-
     plane = np.array([fit[0], fit[1], -1, fit[2]])
 
     # https://math.stackexchange.com/a/897677/1012327
@@ -369,9 +372,9 @@ def live_mocap(data):
 
 if __name__ == '__main__':
 
-    # serial_thread = threading.Thread(target=serial_worker)
-    # serial_thread.daemon = True
-    # serial_thread.start()
+    serial_thread = threading.Thread(target=serial_worker)
+    serial_thread.daemon = True
+    serial_thread.start()
 
-    # socketio.run(app, port=3001, debug=True, use_reloader=False)
-    socketio.run(app, port=3001, debug=True)
+    socketio.run(app, port=3001, debug=True, use_reloader=False)
+    # socketio.run(app, port=3001, debug=True)

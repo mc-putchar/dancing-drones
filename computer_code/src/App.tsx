@@ -1168,7 +1168,7 @@ export default function App() {
                 <Canvas orthographic camera={{ zoom: 1000, position: [0, 0, 10] }}>
                   <ambientLight />
                   {cameraPoses.map(({ R, t }, i) => (
-                    <CameraWireframe R={R} t={t} toWorldCoordsMatrix={toWorldCoordsMatrix} key={i} />
+                    <CameraWireframe R={R} t={t} toWorldCoordsMatrix={toWorldCoordsMatrix} idx={i} key={i} />
                   ))}
                   <Points objectPointsRef={objectPoints} objectPointErrorsRef={objectPointErrors} count={objectPointCount} />
                   <Objects filteredObjectsRef={filteredObjects} count={objectPointCount} />

@@ -1,7 +1,7 @@
 import { matrix, multiply, transpose } from "mathjs";
 import { BufferAttribute, BufferGeometry, EdgesGeometry, LineBasicMaterial, LineSegments } from "three";
 
-export default function CameraWireframe({R, t, toWorldCoordsMatrix}: {R: Array<Array<number>>, t: Array<number>, toWorldCoordsMatrix: number[][]}) {
+export default function CameraWireframe({R, t, toWorldCoordsMatrix, idx}: {R: Array<Array<number>>, t: Array<number>, toWorldCoordsMatrix: number[][], idx: number}) {
   const vertices = [
     [0,0,0],
     [1,0.85,1],
@@ -50,8 +50,21 @@ export default function CameraWireframe({R, t, toWorldCoordsMatrix}: {R: Array<A
   geometry.setAttribute('position', new BufferAttribute(transformedVertices, 3));
 
   const wireframeGeo = new EdgesGeometry(geometry);
-  const mat = new LineBasicMaterial({color: 0x000000, linewidth: 2});
-
+  let mat;
+  switch (idx) {
+    case 0:
+      mat = new LineBasicMaterial({color: 0xff0000, linewidth: 2});
+      break;
+    case 1:
+      mat = new LineBasicMaterial({color: 0x00ff00, linewidth: 2});
+      break;
+    case 2:
+      mat = new LineBasicMaterial({color: 0x0000ff, linewidth: 2});
+      break;
+    default:
+      mat = new LineBasicMaterial({color: 0x000000, linewidth: 2});
+      break;
+  }
 
   return (
     <mesh>
