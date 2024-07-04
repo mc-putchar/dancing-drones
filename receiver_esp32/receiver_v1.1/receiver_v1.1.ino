@@ -4,7 +4,7 @@
 #include <ArduinoJson.h>
 #include <PID_v1.h>
 #include <stdint.h>
-#include <EEPROM.h>
+// #include <EEPROM.h>
 #include "sbus.h"
 
 #define batVoltagePin 34
@@ -14,12 +14,14 @@
 
 #define DRONE_INDEX 0
 
-#define EEPROM_SIZE 4
+// #define EEPROM_SIZE 4
 
 unsigned long lastPing;
 
-bfs::SbusTx sbus_tx(&Serial1, 33, 32, true, false);
+bfs::SbusTx sbus_tx(&Serial1, 33, 32, false, false);
 bfs::SbusData data;
+
+// int rep_data[5];
 
 bool armed = false;
 unsigned long timeArmed = 0;
@@ -161,6 +163,10 @@ void setup() {
     sbus_tx.Write();
   }
 
+  // Init replacement data from Serial
+  // for (int i = 0; i < 5; ++i)
+  //   rep_data[i] = 0;
+
   // Set device as a Wi-Fi Station
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   esp_wifi_init(&cfg);
@@ -210,17 +216,27 @@ void setup() {
   yVelPID.SetOutputLimits(-1, 1);
   zVelPID.SetOutputLimits(-1, 1);
 
-  EEPROM.begin(EEPROM_SIZE);
+  // EEPROM.begin(EEPROM_SIZE);
 
-  xTrim = EEPROM.read(0);
-  yTrim = EEPROM.read(1);
-  zTrim = EEPROM.read(2);
-  yawTrim = EEPROM.read(3);
+  // xTrim = EEPROM.read(0);
+  // yTrim = EEPROM.read(1);
+  // zTrim = EEPROM.read(2);
+  // yawTrim = EEPROM.read(3);
 
   lastPing = micros();
   lastLoopTime = micros();
   lastSbusSend = micros();
 }
+
+// void read_input()
+// {
+//   String s = Serial.readStringUntil('\n');
+//   if (s[0] - '0' >= 0 && s[0] - '0' < 5) {
+//     String tmp = s.substring(2);
+//     rep_data[s[0] - '0'] = tmp.toInt();
+//     Serial.printf("Replaced channel %c with value %d\n", s[0], rep_data[s[0] - '0']);
+//   }
+// }
 
 void loop() {
   while (micros() - lastLoopTime < 1e6 / loopFrequency) { yield(); }
@@ -257,11 +273,16 @@ void loop() {
   int yawPWM = 992 + (yawPosOutput * 811) + yawTrim;
   double groundEffectMultiplier = 1 - groundEffectCoef*pow(((2*ROTOR_RADIUS) / (4*(zPos-groundEffectOffset))), 2);
   zPWM *= max(0., groundEffectMultiplier);
-  zPWM = armed && millis() - timeArmed > 100 ? zPWM : 185;
+  zPWM = ((armed && millis() - timeArmed > 100) ? zPWM : 220);
   data.ch[0] = -yPWM;
   data.ch[1] = xPWM;
   data.ch[2] = zPWM;
   data.ch[3] = yawPWM;
+
+  // for (int i = 0; i < 5; ++i) {
+  //   if (rep_data[i])
+  //     data.ch[i] = rep_data[i];
+  // }
 
   if (micros() - lastSbusSend > 1e6 / sbusFrequency) {
     lastSbusSend = micros();
@@ -272,4 +293,7 @@ void loop() {
     sbus_tx.data(data);
     sbus_tx.Write();
   }
+  // if (Serial.available() > 0) {
+  //   read_input();
+  // }
 }

@@ -74,12 +74,15 @@ void loop() {
     int droneIndex = Serial.read() - '0';
     Serial.readBytes(buffer, availableBytes-1);
     buffer[availableBytes-1] = '\0';
-    esp_err_t result = esp_now_send(broadcastAddresses[0], (uint8_t *)&buffer, strlen(buffer) + 1);
+    Serial.printf("\n drone index %d: ", droneIndex);
+    Serial.print(buffer);
+
+    esp_err_t result = esp_now_send(broadcastAddresses[droneIndex], (uint8_t *)&buffer, strlen(buffer) + 1);
     if (result) {
       Serial.println(esp_err_to_name(result));
     }
-    else {
-      yield();
-    }
+  }
+  else {
+    yield();
   }
 }

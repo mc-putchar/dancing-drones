@@ -1,4 +1,3 @@
-
 [submodule "deps/pseyepy"]
 	path = deps/pseyepy
 	url = https://github.com/mc-putchar/pseyepy.git
