@@ -1069,50 +1069,95 @@ export default function App() {
               <Col>
                 <Row className="mt-3 mb-1">
                   <Col xs={4}>
-                    <Form.Label>X Trim: {droneTrim[0]}</Form.Label>
+                    <Form.Label>X Trim:</Form.Label>
                   </Col>
-                  <Col>
+                  <Col xs={2}>
+                    <Form.Control
+                      value={droneTrim[0]}
+                      onChange={(event) => {
+                        let newDroneTrim = droneTrim.slice()
+                        newDroneTrim[0] = event.target.value
+                        setDroneTrim(newDroneTrim)
+                      }}
+                    />
+                  </Col>
+                </Row>
+                <Row className="mb-1">
+                  <Col xs={8}>
                     <Form.Range value={droneTrim[0]} min={-800} max={800} onChange={(event) => {
-                      let newDroneTrim = droneTrim.slice()
-                      newDroneTrim[0] = event.target.value
-                      setDroneTrim(newDroneTrim)
-                    }} />
+                          let newDroneTrim = droneTrim.slice()
+                          newDroneTrim[0] = event.target.value
+                          setDroneTrim(newDroneTrim)
+                        }} />
                   </Col>
                 </Row>
                 <Row className="mb-1">
                   <Col xs={4}>
-                    <Form.Label>Y Trim: {droneTrim[1]}</Form.Label>
+                    <Form.Label>Y Trim:</Form.Label>
                   </Col>
-                  <Col>
+                  <Col xs={2}>
+                    <Form.Control
+                      value={droneTrim[1]}
+                      onChange={(event) => {
+                        let newDroneTrim = droneTrim.slice()
+                        newDroneTrim[1] = event.target.value
+                        setDroneTrim(newDroneTrim)
+                      }}
+                    />
+                  </Col>
+                </Row>
+                <Row className="mb-1">
+                  <Col xs={8}>
                     <Form.Range value={droneTrim[1]} min={-800} max={800} onChange={(event) => {
-                      let newDroneTrim = droneTrim.slice()
-                      newDroneTrim[1] = event.target.value
-                      setDroneTrim(newDroneTrim)
-                    }} />
+                          let newDroneTrim = droneTrim.slice()
+                          newDroneTrim[1] = event.target.value
+                          setDroneTrim(newDroneTrim)
+                        }} />
                   </Col>
                 </Row>
                 <Row className="mb-1">
                   <Col xs={4}>
-                    <Form.Label>Z Trim: {droneTrim[2]}</Form.Label>
+                    <Form.Label>Z Trim:</Form.Label>
                   </Col>
-                  <Col>
+                  <Col xs={2}>
+                    <Form.Control
+                      value={droneTrim[2]}
+                      onChange={(event) => {
+                        let newDroneTrim = droneTrim.slice()
+                        newDroneTrim[2] = event.target.value
+                        setDroneTrim(newDroneTrim)
+                      }}
+                    />
+                  </Col>
+                </Row>
+                <Row className="mb-1">
+                  <Col xs={8}>
                     <Form.Range value={droneTrim[2]} min={-800} max={800} onChange={(event) => {
-                      let newDroneTrim = droneTrim.slice()
-                      newDroneTrim[2] = event.target.value
-                      setDroneTrim(newDroneTrim)
-                    }} />
+                          let newDroneTrim = droneTrim.slice()
+                          newDroneTrim[2] = event.target.value
+                          setDroneTrim(newDroneTrim)
+                        }} />
                   </Col>
                 </Row>
                 <Row className="mb-1">
                   <Col xs={4}>
-                    <Form.Label>Yaw Trim: {droneTrim[3]}</Form.Label>
+                    <Form.Label>Yaw Trim:</Form.Label>
                   </Col>
-                  <Col>
-                    <Form.Range value={droneTrim[3]} min={-800} max={800} onChange={(event) => {
+                  <Col xs={2}>
+                    <Form.Control value={droneTrim[3]} min={-800} max={800} onChange={(event) => {
                       let newDroneTrim = droneTrim.slice()
                       newDroneTrim[3] = event.target.value
                       setDroneTrim(newDroneTrim)
                     }} />
+                  </Col>
+                </Row>
+                <Row className="mb-1">
+                  <Col xs={8}>
+                    <Form.Range value={droneTrim[3]} min={-800} max={800} onChange={(event) => {
+                          let newDroneTrim = droneTrim.slice()
+                          newDroneTrim[3] = event.target.value
+                          setDroneTrim(newDroneTrim)
+                        }} />
                   </Col>
                 </Row>
               </Col>
