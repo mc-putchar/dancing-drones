@@ -18,7 +18,7 @@ import TrajectoryPlanningSetpoints from './components/TrajectoryPlanningSetpoint
 
 const TRAJECTORY_PLANNING_TIMESTEP = 0.05
 const LAND_Z_HEIGHT = 0.075
-const NUM_DRONES = 2
+const NUM_DRONES = 1
 
 export default function App() {
   const [cameraStreamRunning, setCameraStreamRunning] = useState(false);
@@ -535,8 +535,12 @@ export default function App() {
               <Col xs={4} className='pt-2'>
                 Camera Poses:
               </Col>
-              <Col>
+            </Row>
+            <Row className='pt-3'>
+            <Col>
                 <Form.Control
+                  as="textarea"
+                  rows={13}
                   value={JSON.stringify(cameraPoses)}
                   onChange={(event) => setCameraPoses(JSON.parse(event.target.value))}
                 />
@@ -546,8 +550,12 @@ export default function App() {
               <Col xs={4} className='pt-2'>
                 To World Matrix:
               </Col>
-              <Col>
+            </Row>
+            <Row>
+            <Col>
                 <Form.Control
+                  as="textarea"
+                  rows={6}
                   value={JSON.stringify(toWorldCoordsMatrix)}
                   onChange={(event) => setToWorldCoordsMatrix(JSON.parse(event.target.value))}
                 />

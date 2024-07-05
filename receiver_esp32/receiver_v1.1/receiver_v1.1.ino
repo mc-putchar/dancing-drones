@@ -10,7 +10,7 @@
 #define batVoltagePin 34
 #define MAX_VEL 100
 #define ROTOR_RADIUS 0.0225
-#define Z_GAIN 0.7
+#define Z_GAIN 1
 
 #define DRONE_INDEX 0
 
