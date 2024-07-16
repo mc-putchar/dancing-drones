@@ -202,44 +202,85 @@ def arm_drone(data):
         ser.write(f"{str(data['droneIndex'])}{json.dumps(serial_data)}".encode('utf-8'))
         time.sleep(0.01)
 
-
 @socketio.on("acquire-floor")
 def acquire_floor(data):
-    cameras = Cameras.instance()
+    # Obtiene la instancia única de la clase Cameras.
+    #cameras = Cameras.instance()
+    
+    # Obtiene los puntos del objeto del diccionario de datos recibido.
     object_points = data["objectPoints"]
+    
+    # Convierte object_points en un array de numpy, aplanando la lista de listas.
     object_points = np.array([item for sublist in object_points for item in sublist])
 
+    print(object_points)
+
+    # Inicializa listas temporales para los coeficientes de la matriz A y el vector b.
     tmp_A = []
     tmp_b = []
+    
+    # Llena tmp_A con las coordenadas x, y y un valor constante 1, y tmp_b con las coordenadas z.
     for i in range(len(object_points)):
-        tmp_A.append([object_points[i,0], object_points[i,1], 1])
-        tmp_b.append(object_points[i,2])
+        tmp_A.append([object_points[i, 0], object_points[i, 1], 1])
+        tmp_b.append(object_points[i, 2])
+    
+    # Convierte tmp_b a una matriz columna y tmp_A a una matriz.
     b = np.matrix(tmp_b).T
     A = np.matrix(tmp_A)
 
+    # Resuelve el sistema de ecuaciones lineales para encontrar la mejor aproximación del plano.
     fit, residual, rnk, s = linalg.lstsq(A, b)
+    
+    # Transpone y extrae los coeficientes del ajuste.
     fit = fit.T[0]
 
+    # Calcula el vector normal del plano.
     plane_normal = np.array([[fit[0]], [fit[1]], [-1]])
+    
+    # Normaliza el vector normal.
     plane_normal = plane_normal / linalg.norm(plane_normal)
-    up_normal = np.array([[0],[0],[1]], dtype=np.float32)
+    
+    # Vector normal hacia arriba.
+    up_normal = np.array([[0], [0], [1]], dtype=np.float32)
+
+    # Define el plano con los coeficientes ajustados.
     plane = np.array([fit[0], fit[1], -1, fit[2]])
 
-    # https://math.stackexchange.com/a/897677/1012327
+    print(plane)
+
+    # Matriz de rotación G basada en el ángulo entre el vector normal del plano y el vector hacia arriba.
     G = np.array([
-        [np.dot(plane_normal.T,up_normal)[0][0], -linalg.norm(np.cross(plane_normal.T[0],up_normal.T[0])), 0],
-        [linalg.norm(np.cross(plane_normal.T[0],up_normal.T[0])), np.dot(plane_normal.T,up_normal)[0][0], 0],
+        [np.dot(plane_normal.T, up_normal)[0][0], -linalg.norm(np.cross(plane_normal.T[0], up_normal.T[0])), 0],
+        [linalg.norm(np.cross(plane_normal.T[0], up_normal.T[0])), np.dot(plane_normal.T, up_normal)[0][0], 0],
         [0, 0, 1]
     ])
-    F = np.array([plane_normal.T[0], ((up_normal-np.dot(plane_normal.T,up_normal)[0][0]*plane_normal)/linalg.norm((up_normal-np.dot(plane_normal.T,up_normal)[0][0]*plane_normal))).T[0], np.cross(up_normal.T[0],plane_normal.T[0])]).T
+    
+    # Matriz F basada en la base ortonormal creada a partir de los vectores normalizados.
+    F = np.array([plane_normal.T[0], 
+                  ((up_normal - np.dot(plane_normal.T, up_normal)[0][0] * plane_normal) / linalg.norm((up_normal - np.dot(plane_normal.T, up_normal)[0][0] * plane_normal))).T[0], 
+                  np.cross(up_normal.T[0], plane_normal.T[0])]).T
+    
+    # Calcula la matriz de rotación R.
     R = F @ G @ linalg.inv(F)
 
-    R = R @ [[1,0,0],[0,-1,0],[0,0,1]] # i dont fucking know why
+    # Ajuste manual a la matriz de rotación.
+    R = R @ [[1, 0, 0], [0, -1, 0], [0, 0, 1]]  # i dont fucking know why
 
-    cameras.to_world_coords_matrix = np.array(np.vstack((np.c_[R, [0,0,0]], [[0,0,0,1]])))
+    # Crea una nueva matriz de transformación que incluye la rotación R y una columna de traslación nula.
+    new_transform = np.array(np.vstack((np.c_[R, [0, 0, 0]], [[0, 0, 0, 1]])))
 
-    socketio.emit("to-world-coords-matrix", {"to_world_coords_matrix": cameras.to_world_coords_matrix.tolist()})
+    # Aplica la nueva matriz de transformación al plano.
+    transformed_plane = new_transform @ plane  # Aplicar transformación
 
+    # Actualiza la matriz de coordenadas globales en la instancia de cámaras.
+    #cameras.to_world_coords_matrix = new_transform
+
+    # Emite un evento con la nueva matriz de transformación y los datos del plano.
+    socketio.emit("to-world-coords-matrix", {
+        "to_world_coords_matrix": new_transform.tolist(),
+        "floor_plane": plane.tolist(),
+        "transformed_floor_plane": transformed_plane.tolist()
+    })
 
 @socketio.on("set-origin")
 def set_origin(data):
@@ -273,6 +314,103 @@ def capture_points(data):
     elif (start_or_stop == "stop"):
         cameras.stop_capturing_points()
 
+def rotation_matrix(axis, angle_degrees):
+    angle_radians = np.radians(angle_degrees)
+    if axis == 'x':
+        return np.array([
+            [1, 0, 0],
+            [0, np.cos(angle_radians), -np.sin(angle_radians)],
+            [0, np.sin(angle_radians), np.cos(angle_radians)]
+        ])
+    elif axis == 'y':
+        return np.array([
+            [np.cos(angle_radians), 0, np.sin(angle_radians)],
+            [0, 1, 0],
+            [-np.sin(angle_radians), 0, np.cos(angle_radians)]
+        ])
+    elif axis == 'z':
+        return np.array([
+            [np.cos(angle_radians), -np.sin(angle_radians), 0],
+            [np.sin(angle_radians), np.cos(angle_radians), 0],
+            [0, 0, 1]
+        ])
+
+@socketio.on("rotate-scene")
+def rotate_scene(data):
+    axis = data['axis']
+    increment = data['increment']
+    angle = 1 * increment  # 1 degree increment or decrement
+
+    cameras = Cameras.instance()
+    # Assuming to_world_coords_matrix is a 4x4 matrix
+    to_world_coords_matrix = np.array(cameras.to_world_coords_matrix)
+
+    # Extract the rotation part of the matrix
+    rotation_part = to_world_coords_matrix[:3, :3]
+
+    # Calculate the rotation matrix
+    rotation = rotation_matrix(axis, angle)
+
+    # Apply the rotation
+    new_rotation_part = rotation @ rotation_part
+
+    # Update the to_world_coords_matrix with the new rotation part
+    to_world_coords_matrix[:3, :3] = new_rotation_part
+    
+    cameras.to_world_coords_matrix = to_world_coords_matrix
+
+    # Emit the updated matrix back to clients
+    socketio.emit("to-world-coords-matrix", {
+        "to_world_coords_matrix": to_world_coords_matrix.tolist()
+    })
+
+    print("Rotated scene around {} axis by {} degrees".format(axis, angle))
+
+# Test function to store poses as points and direction vectors for the cameras
+@socketio.on("calculate-camera-positions")
+def calculate_camera_positions(data):
+    print("Calculte camera positions")
+    cameras = Cameras.instance()
+    camera_poses = data["cameraPoses"]
+    to_world_coords_matrix = data["toWorldCoordsMatrix"]
+    cameras.to_world_coords_matrix = to_world_coords_matrix
+    print(to_world_coords_matrix)
+
+    camera_positions = []
+    camera_directions = []
+    for i in range(len(camera_poses)):
+        t = np.array(camera_poses[i]["t"])
+        R = np.array(camera_poses[i]["R"])
+
+        #Invert z axis (Threejs uses (x, z, y) and z is to the outside of the screen)
+        t = np.array([[1,0,0],[0,-1,0],[0,0,1]]) @ t
+        R = np.array([[1,0,0],[0,-1,0],[0,0,1]]) @ R
+
+        # Convertir la posición a coordenadas homogéneas
+        position_homogeneous = np.append(t, 1)
+        position_transformed = to_world_coords_matrix @ position_homogeneous
+        position = position_transformed[:3].tolist()
+
+        # Calcular la dirección y transformar (sin la componente de traslación)
+        direction = (R @ np.array([0, 0, 1])).tolist()
+        direction_homogeneous = np.append(direction, 0)
+        direction_transformed = to_world_coords_matrix @ direction_homogeneous
+        direction = direction_transformed[:3].tolist()
+
+        # Almacenar las posiciones y direcciones transformadas
+        camera_positions.append(position)
+        camera_directions.append(direction)
+
+    cameras.camera_positions = camera_positions
+    cameras.camera_directions = camera_directions
+
+    print("Camera positions: ", camera_positions)
+
+    socketio.emit("camera-positions", {
+        "camera_positions": camera_positions,
+        "camera_directions": camera_directions
+    })
+
 @socketio.on("calculate-camera-pose")
 def calculate_camera_pose(data):
     cameras = Cameras.instance()
@@ -283,6 +421,11 @@ def calculate_camera_pose(data):
         "R": np.eye(3),
         "t": np.array([[0],[0],[0]], dtype=np.float32)
     }]
+
+    # Lista para almacenar posiciones y direcciones de las cámaras
+    camera_positions = []
+    camera_directions = []
+
     for camera_i in range(0, cameras.num_cameras-1):
         camera1_image_points = image_points_t[camera_i]
         camera2_image_points = image_points_t[camera_i+1]
@@ -315,6 +458,18 @@ def calculate_camera_pose(data):
             "R": R,
             "t": t
         })
+
+        #Calculate camera position
+        # Calcula y almacena la posición de la cámara
+        position = t.flatten()
+        camera_positions.append(position)
+
+        # Calcula y almacena la dirección de la cámara
+        direction = R @ np.array([0, 0, 1])
+        camera_directions.append(direction)
+
+    cameras.camera_positions = camera_positions
+    cameras.camera_directions = camera_directions
 
     camera_poses = bundle_adjustment(image_points, camera_poses, socketio)
 

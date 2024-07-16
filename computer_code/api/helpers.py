@@ -29,6 +29,8 @@ class Cameras:
 
         self.is_triangulating_points = False
         self.camera_poses = None
+        self.camera_positions = None
+        self.camera_directions = None
 
         self.is_locating_objects = False
 

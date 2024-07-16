@@ -2,7 +2,7 @@ import { max, multiply } from "mathjs";
 import { MutableRefObject, useEffect, useRef } from "react";
 import { Color, InstancedMesh, Matrix4, Object3D } from "three";
 
-export default function TrajectoryPlanningSetpoints({ trajectoryPlanningSetpoints, NUM_DRONES }: { trajectoryPlanningSetpoints: number[][], NUM_DRONES: number }) {
+export default function TrajectoryPlanningSetpoints({ trajectoryPlanningSetpoints, NUM_DRONES }: { trajectoryPlanningSetpoints: number[][][], NUM_DRONES: number }) {
   const instancedMeshRef = useRef<InstancedMesh>()
   const temp = new Object3D()
   const tempColour = new Color()
