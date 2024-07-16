@@ -38,7 +38,7 @@ const SceneView = (props: SceneViewProps) => {
       <Canvas orthographic camera={{ zoom: 1000, position: [0, 0, 10] }}>
         <ambientLight />
         {cameraPoses.map(({ R, t }, i) => (
-          <CameraWireframe R={R} t={t} toWorldCoordsMatrix={toWorldCoordsMatrix} key={i} />
+          <CameraWireframe R={R} t={t} toWorldCoordsMatrix={toWorldCoordsMatrix} idx={i} key={i} />
         ))}
         {/* <CameraPosition position={cameraPositions[0]} direction={cameraDirections[0]} key={0} /> */}
         {cameraPositions.map((position, i) => (

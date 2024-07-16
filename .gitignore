@@ -9,6 +9,7 @@
 # testing
 /coverage
 cam_calibration/cam*
+cam_calibration/collection*
 
 # next.js
 /.next/

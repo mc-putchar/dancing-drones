@@ -15,6 +15,9 @@ wait_between_frames = 0.24
 n_cams = 1
 output_file = 'cam_params.json'
 
+def round_values(matrix, decimals=8):
+    return np.round(matrix, decimals).tolist()
+
 if len(sys.argv) > 1:
     n_cams = sys.argv[1]
     print(f'Calibrating {n_cams} cameras')
@@ -29,6 +32,8 @@ out = '[\n'
 # Initialize cameras
 cams = Camera(fps=90, resolution=Camera.RES_SMALL, colour=False, gain=42, vflip=False)
 Display(cams)
+
+camera_params = []
 
 for cam_index in range(int(n_cams)):
     input("Press Enter to continue...")
@@ -113,22 +118,41 @@ for cam_index in range(int(n_cams)):
     """
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
 
-    cam_params = '\n{\n "intrinsic_matrix": ['
-    for m in mtx:
-        cam_params += f'{[i for i in m]},'
-    cam_params += '],\n "distortion_coef": ['
-    for d in dist:
-        cam_params += f'{[i for i in d]}'
-    cam_params += '],\n "rotation": 0\n}'
-    out += cam_params
-    if cam_index != int(n_cams) - 1:
-        out += ','
+    # cam_params = '\n{\n "intrinsic_matrix": ['
+    # for m in mtx:
+    #     cam_params += f'{[i for i in m]},'
+    # cam_params += '],\n "distortion_coef": ['
+    # for d in dist:
+    #     cam_params += f'{[i for i in d]}'
+    # cam_params += '],\n "rotation": 0\n}'
+    # out += cam_params
+    # if cam_index != int(n_cams) - 1:
+    #     out += ','
+    mtx = round_values(mtx)
+    dist = round_values(dist)
+
+    print("Camera matrix : \n")
+    print(mtx)
+    print("distortion coefficients : \n")
+    print(dist)
+
+    params = {
+        "intrinsic_matrix": mtx,
+        "distortion_coef": dist,
+        "rotation": 0
+    }
+
+    if params is not None:
+        camera_params.append(params)
+
     print(f"Finished calibrating camera {cam_index}")
 
 
 # Clean up
 cams.end()
-out += '\n]\n'
-with open(output_file, 'w') as file:
-    file.write(out)
+
+if camera_params is not None:
+    with open(output_file, 'w') as file:
+        json.dump(camera_params, file, indent=4)
+
 print(f'Finished camera calibrations. Check output in {output_file}')
