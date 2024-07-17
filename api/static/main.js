@@ -1,20 +1,10 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls';
-
-export function toggleStream() {
-	streamBox = document.getElementById("streamBox");
-	console.log('stream toggled ');
-	console.log(streamBox.src);
-	if (streamBox.src.endsWith("/camfeed"))
-		streamBox.src = '';
-	else
-		streamBox.src = '/camfeed';
-}
-window.toggleStream = toggleStream;
+import {toggleStream} from './hooks.js';
+import * as THREE from './three.module.js';
+import {OrbitControls} from './OrbitControls.js';
 
 // Three.js initialization
 function initThreeJS() {
-	const container = document.getElementById('threejs-container');
+	const container = document.getElementById("threejs-container");
 	const scene = new THREE.Scene();
 	const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
 	const renderer = new THREE.WebGLRenderer();
@@ -45,4 +35,6 @@ function initThreeJS() {
 	animate();
 }
 
-document.addEventListener('DOMContentLoaded', initThreeJS);
+
+document.getElementById("startStreamBtn").addEventListener("click", toggleStream);
+document.addEventListener("DOMContentLoaded", initThreeJS);

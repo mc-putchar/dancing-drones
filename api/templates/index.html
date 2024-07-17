@@ -8,15 +8,9 @@
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
   <link rel="icon" href="{{ url_for('static', path='favicon.ico') }}" type="image/x-icon">
   <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
-
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/"
-      }
-    }
+  <script type="module" src="{{ url_for('static', path='main.js') }}">
   </script>
+
 </head>
 <body>
 
@@ -39,10 +33,10 @@
               </div>
               <div class="collapse multi-collapse" id="streamBox">
                 <div class="card-body">
-                    <button class="btn btn-primary" onclick="toggleStream()">Start Stream</button>
+                    <button class="btn btn-primary" id="startStreamBtn">Start Stream</button>
                     <button class="btn btn-secondary">Triangulation</button>
                     <button class="btn btn-secondary">Locate Objects</button>
-                    <img src="" class="img-fluid mt-3" alt="Camera Feed">
+                    <img id="streamView" src="" class="img-fluid mt-3" alt="Camera Feed">
                 </div>
               </div>
             </div>
@@ -142,7 +136,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
-<script type="module" src="{{ url_for('static', path='main.js') }}"></script>
 
 </body>
 </html>

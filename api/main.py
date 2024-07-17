@@ -103,7 +103,7 @@ async def index(request: Request, response_class=HTMLResponse):
     return templates.TemplateResponse(request=request, name="index.html", context=context)
 
 
-@app.get("/api/camera-stream", include_in_schema=False)
+@app.get("/camera-stream")
 async def stream_video():
     cameras = Cameras.instance()
     cameras.set_socketio(socketio)
