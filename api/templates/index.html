@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }}</title>
+
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" href="{{ url_for('static', path='favicon.ico') }}" type="image/x-icon">
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+    <div class="container">
+        <div class="row">
+          <!-- Left Column -->
+          <div class="col-md-6">
+            <!-- Camera Stream -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <button class="btn btn-primary" data-target="#streamBox" aria-controls="streamBox" data-toggle="collapse" type="button" aria-expanded="false">
+                    <h6 class="mb-0">Camera Stream</h6>
+                </button>
+                <button class="btn btn-primary" data-target="#calibrationBox" aria-controls="calibrationBox" data-toggle="collapse" type="button" aria-expanded="false">
+                  <h6 class="mb-0">Camera Calibration</h6>
+                </button>
+                <button class="btn btn-primary" data-target="#droneBox" aria-controls="droneBox" data-toggle="collapse" type="button" aria-expanded="false">
+                    <h6 class="mb-0">Drone Control</h6>
+                </button>
+              </div>
+              <div class="collapse multi-collapse" id="streamBox">
+                <div class="card-body">
+                    <button class="btn btn-primary" onclick="toggleStream()">Start Stream</button>
+                    <button class="btn btn-secondary">Triangulation</button>
+                    <button class="btn btn-secondary">Locate Objects</button>
+                    <img src="" class="img-fluid mt-3" alt="Camera Feed">
+                </div>
+              </div>
+            </div>
+      
+            <!-- Camera Calibration -->
+            <div class="card mb-4">
+              <div class="card-header">
+              </div>
+              <div class="card-body">
+                <div class="collapse multi-collapse" id="calibrationBox">
+                    <label for="exposureRange">Exposure</label>
+                    <input type="range" class="custom-range" id="exposureRange" min="0" max="100">
+                    
+                    <label for="gainRange">Gain</label>
+                    <input type="range" class="custom-range" id="gainRange" min="0" max="100">
+                    
+                    <button class="btn btn-secondary mt-2">Collect Points</button>
+                    <button class="btn btn-secondary mt-2">Calculate Camera Pose</button>
+                    <button class="btn btn-secondary mt-2">Set Scale</button>
+                    <button class="btn btn-secondary mt-2">Acquire Floor</button>
+                    <button class="btn btn-secondary mt-2">Set Origin</button>
+                    <br />
+                    <label for="cameraPoses">Camera Poses</label>
+                    <textarea class="form-control" id="cameraPoses" rows="3"></textarea>
+                    
+                    <label for="toWorldMatrix">To World Matrix</label>
+                    <textarea class="form-control" id="toWorldMatrix" rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+
+                <!-- Drone Control -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="collapse multi-collapse" id="droneBox">
+
+                        <button class="btn btn-danger mt-3">Arm Drone</button><br />
+                        <label for="xTrim">X Trim</label>
+                        <input type="number" class="form-control" id="xTrim">
+                        
+                        <label for="yTrim">Y Trim</label>
+                        <input type="number" class="form-control" id="yTrim">
+                        
+                        <label for="zTrim">Z Trim</label>
+                        <input type="number" class="form-control" id="zTrim">
+                        
+                        <label for="yawTrim">Yaw Trim</label>
+                        <input type="number" class="form-control" id="yawTrim">
+                        
+                        <label for="setpointX">Setpoint X</label>
+                        <input type="number" class="form-control" id="setpointX">
+                        
+                        <label for="setpointY">Setpoint Y</label>
+                        <input type="number" class="form-control" id="setpointY">
+                        
+                        <label for="setpointZ">Setpoint Z</label>
+                        <input type="number" class="form-control" id="setpointZ">
+                        
+                        </div>
+                    </div>
+                    </div>
+          </div>
+      
+          <!-- Right Column -->
+          <div class="col-md-6">
+            <!-- Scene Visualization -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <button class="btn btn-primary" data-target="#visualizationBox" aria-controls="visualizationBox" data-toggle="collapse" type="button" aria-expanded="false">
+                <h6 class="mb-0">Scene Visualization</h6>
+                </button>
+                <button class="btn btn-primary" data-target="#trajectoryBox" aria-controls="trajectoryBox" data-toggle="collapse" type="button" aria-expanded="false">
+                    <h6 class="mb-0">Trajectory Generation</h6>
+                </button>
+              </div>
+              <div class="card-body">
+                <div class="collapse multi-collapse" id="visualizationBox">
+                <div id="threejs-container" class="threejs-container"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Trajectory Generation -->
+            <div class="card mb-4">
+              <div class="card-body">
+                <div class="collapse multi-collapse" id="trajectoryBox">
+                    <!-- Add elements for Trajectory Generation here -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+<!-- Bootstrap and jQuery JS -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script type="module" src="{{ url_for('static', path='main.js') }}"></script>
+
+</body>
+</html>
