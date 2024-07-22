@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, FormEventHandler } from 'react';
-import { Accordion, Button, Card, Col, Form, Row, Tooltip, OverlayTrigger } from 'react-bootstrap';
+import { Accordion, Button, Card, Col, Form, Row} from 'react-bootstrap';
+import { Tooltip } from 'react-tooltip'
 import { socket } from '../shared/styles/scripts/socket';
+import { is } from '@react-three/fiber/dist/declarations/src/core/utils';
 
 interface CameraSettingsProps {
   cameraPoses: Array<object>;
@@ -8,7 +10,11 @@ interface CameraSettingsProps {
   toWorldCoordsMatrix: number[][];
   setToWorldCoordsMatrix: React.Dispatch<React.SetStateAction<number[][]>>;
   objectPoints: React.MutableRefObject<any[]>;
+  objectPointErrors: React.MutableRefObject<any[]>;
   cameraStreamRunning: boolean;
+  isTriangulatingPoints: boolean;
+  setIsTriangulatingPoints: React.Dispatch<React.SetStateAction<boolean>>;
+  resetPoints: () => void;
 }
 
 const CameraSettings = (props: CameraSettingsProps) => {
@@ -18,14 +24,19 @@ const CameraSettings = (props: CameraSettingsProps) => {
     toWorldCoordsMatrix,
     setToWorldCoordsMatrix,
     objectPoints,
-    cameraStreamRunning
+    objectPointErrors,
+    cameraStreamRunning,
+    isTriangulatingPoints,
+    setIsTriangulatingPoints,
+    resetPoints
   } = props;
 
   const [exposure, setExposure] = useState<number>(100);
   const [gain, setGain] = useState<number>(0);
+
   const [capturingPointsForPose, setCapturingPointsForPose] = useState(false);
   const [capturedPointsForPose, setCapturedPointsForPose] = useState("");
-  const [isTriangulatingPoints, setIsTriangulatingPoints] = useState(false);
+  
   const [isLocatingObjects, setIsLocatingObjects] = useState(false);
 
   const updateCameraSettings: FormEventHandler = (e) => {
@@ -45,7 +56,6 @@ const CameraSettings = (props: CameraSettingsProps) => {
     return true;
   };
 
-  //   Live triangulation
   const capturePointsForPose = (startOrStop: string) => {
     if (startOrStop === "start") {
       setCapturedPointsForPose("");
@@ -79,7 +89,7 @@ const CameraSettings = (props: CameraSettingsProps) => {
     }
   };
 
-  //    Capture points
+  //Capture points
   const startLiveMocap = (startOrStop: string) => {
     socket.emit("triangulate-points", { startOrStop, cameraPoses, toWorldCoordsMatrix });
   };
@@ -107,219 +117,193 @@ const CameraSettings = (props: CameraSettingsProps) => {
       socket.off("to-world-coords-matrix");
     };
   }, []);
-
-  useEffect(() => {
-    socket.on("object-points", (data) => {
-      objectPoints.current.push(data["object_points"]);
-    });
-
-    return () => {
-      socket.off("object-points");
-    };
-  }, []);
   
 
   return (
-    <Accordion defaultActiveKey="0">
-      <Accordion.Item eventKey="0">
-        <Accordion.Header>
-          <h4 className="mb-0">Camera Settings</h4>
-        </Accordion.Header>
-        <Accordion.Body>
-          <Card className='shadow-sm p-3 h-100'>
-            <Row className='pt-3'>
-              <Col xs="4">
-                <Form onChange={updateCameraSettings} className='ps-3'>
-                  <Form.Group className="mb-1">
-                    <Form.Label>Exposure: {exposure}</Form.Label>
-                    <Form.Range value={exposure} onChange={(event) => setExposure(parseFloat(event.target.value))} />
-                  </Form.Group>
-                  <Form.Group className="mb-1">
-                    <Form.Label>Gain: {gain}</Form.Label>
-                    <Form.Range value={gain} onChange={(event) => setGain(parseFloat(event.target.value))} />
-                  </Form.Group>
-                </Form>
-              </Col>
-            </Row>
-            <Row>
-              <Col xs="auto">
-                <h4>Live Triangulation</h4>
-              </Col>
-              <Col>
-                <Button
-                    size='sm'
-                    variant={isTriangulatingPoints ? "outline-danger" : "outline-primary"}
-                    disabled={!cameraStreamRunning}
-                    onClick={() => {
-                        if (!isTriangulatingPoints) {
-                            objectPoints.current = [];
-                        }
-                    setIsTriangulatingPoints(!isTriangulatingPoints);
-                    startLiveMocap(isTriangulatingPoints ? "stop" : "start");
-                    }}
-                >
-                    {isTriangulatingPoints ? "Stop" : "Start"}
-                </Button>
-              </Col>
-            </Row>
-            <Row>
-              <Col xs="auto">
-                <h4>Locate Objects</h4>
-              </Col>
-              <Col>
-                <Button
-                  size='sm'
-                  variant={isLocatingObjects ? "outline-danger" : "outline-primary"}
-                  disabled={!cameraStreamRunning}
-                  onClick={() => {
-                    setIsLocatingObjects(!isLocatingObjects);
-                    socket.emit("locate-objects", { startOrStop: isLocatingObjects ? "stop" : "start" });
-                  }}
-                >
-                  {isLocatingObjects ? "Stop" : "Start"}
-                </Button>
-              </Col>
-            </Row>
-            <Row>
-              <Col xs="auto">
-                <h4>Set Scale Using Points</h4>
-              </Col>
-              <Col>
-                <Button
-                  size='sm'
-                  variant="outline-primary"
-                  disabled={!isTriangulatingPoints && objectPoints.current.length === 0}
-                  onClick={() => {
-                    socket.emit("determine-scale", { objectPoints: objectPoints.current, cameraPoses: cameraPoses });
-                  }}
-                >
-                  Run
-                </Button>
-              </Col>
-            </Row>
-            <Row>
-              <Col xs="auto">
-                <h4>Acquire Floor</h4>
-              </Col>
-              <Col>
-                <Button
-                  size='sm'
-                  variant="outline-primary"
-                  disabled={!isTriangulatingPoints && objectPoints.current.length === 0}
-                  onClick={() => {
-                    socket.emit("acquire-floor", { objectPoints: objectPoints.current, oldMatrix: toWorldCoordsMatrix });
-                  }}
-                >
-                  Run
-                </Button>
-              </Col>
-            </Row>
-            <Row>
-              <Col xs="auto">
-                <h4>Set Origin</h4>
-              </Col>
-              <Col>
-                <Button
-                  size='sm'
-                  variant="outline-primary"
-                  disabled={!isTriangulatingPoints && objectPoints.current.length === 0}
-                  onClick={() => {
-                    socket.emit("set-origin", { objectPoint: objectPoints.current[0][0], toWorldCoordsMatrix });
-                  }}
-                >
-                  Run
-                </Button>
-              </Col>
-            </Row>
-            <Row>
-              <Col xs="auto">
-                <h4>Collect points for camera pose calibration</h4>
-              </Col>
-              <Col>
-                <OverlayTrigger
-                  placement="right"
-                  overlay={
-                    <Tooltip id="collect-points-for-pose-button-tooltip">
-                      Start camera stream first
-                    </Tooltip>
+    <Card className='shadow-sm p-3 h-100'>
+      <Row className='pt-3'>
+        <Col xs="4">
+          <Form onChange={updateCameraSettings} className='ps-3'>
+            <Form.Group className="mb-1">
+              <Form.Label>Exposure: {exposure}</Form.Label>
+              <Form.Range value={exposure} onChange={(event) => setExposure(parseFloat(event.target.value))} />
+            </Form.Group>
+            <Form.Group className="mb-1">
+              <Form.Label>Gain: {gain}</Form.Label>
+              <Form.Range value={gain} onChange={(event) => setGain(parseFloat(event.target.value))} />
+            </Form.Group>
+          </Form>
+        </Col>
+      </Row>
+      <Row>
+        <Col xs="auto">
+          <h4>Live Triangulation</h4>
+        </Col>
+        <Col>
+          <Button
+              size='sm'
+              variant={isTriangulatingPoints ? "outline-danger" : "outline-primary"}
+              disabled={!cameraStreamRunning}
+              onClick={() => {
+                  if (!isTriangulatingPoints) {
+                      resetPoints();
                   }
-                >
-                  <span className="d-inline-block" data-tooltip-hidden={cameraStreamRunning}>
-                    <Button
-                      size='sm'
-                      variant={capturingPointsForPose ? "outline-danger" : "outline-primary"}
-                      disabled={!cameraStreamRunning}
-                      onClick={() => {
-                        setCapturingPointsForPose(!capturingPointsForPose);
-                        capturePointsForPose(capturingPointsForPose ? "stop" : "start");
-                      }}
-                    >
-                      {capturingPointsForPose ? "Stop" : "Start"}
-                    </Button>
-                  </span>
-                </OverlayTrigger>
-              </Col>
-            </Row>
-            <Row className='pt-3'>
-              <Col>
-                <Button
-                  size='sm'
-                  className='float-end'
-                  variant="outline-primary"
-                  disabled={!(isValidJson(`[${capturedPointsForPose.slice(0, -1)}]`) && JSON.parse(`[${capturedPointsForPose.slice(0, -1)}]`).length !== 0)}
-                  onClick={() => calculateCameraPose(JSON.parse(`[${capturedPointsForPose.slice(0, -1)}]`))}
-                >
-                  Calculate Camera Pose with {isValidJson(`[${capturedPointsForPose.slice(0, -1)}]`) ? JSON.parse(`[${capturedPointsForPose.slice(0, -1)}]`).length : 0} points
-                </Button>
-              </Col>
-            </Row>
-            <Row className='pt-3'>
-              <Col xs={4} className='pt-2'>
-                Camera Poses:
-              </Col>
-              <Col>
-                <Form.Control
-                  value={JSON.stringify(cameraPoses)}
-                  onChange={handleCameraPosesChange}
-                />
-              </Col>
-            </Row>
-            <Row>
-              <Col xs={4} className='pt-2'>
-                To World Matrix:
-              </Col>
-              <Col>
-                <Form.Control
-                  value={JSON.stringify(toWorldCoordsMatrix)}
-                  onChange={(event) => setToWorldCoordsMatrix(JSON.parse(event.target.value))}
-                />
-              </Col>
-            </Row>
-            <Row>
-              <Col xs="auto">
-                <h4>Rotate Scene</h4>
-              </Col>
-              <Col>
-                <div className="d-flex justify-content-between">
-                  <div>
-                    <Button size='sm' variant="outline-primary" onClick={() => rotateScene('x', 1)}>Rotate X +1</Button>
-                    <Button size='sm' variant="outline-primary" onClick={() => rotateScene('x', -1)}>Rotate X -1</Button>
-                  </div>
-                  <div>
-                    <Button size='sm' variant="outline-primary" onClick={() => rotateScene('y', 1)}>Rotate Y +1</Button>
-                    <Button size='sm' variant="outline-primary" onClick={() => rotateScene('y', -1)}>Rotate Y -1</Button>
-                  </div>
-                  <div>
-                    <Button size='sm' variant="outline-primary" onClick={() => rotateScene('z', 1)}>Rotate Z +1</Button>
-                    <Button size='sm' variant="outline-primary" onClick={() => rotateScene('z', -1)}>Rotate Z -1</Button>
-                  </div>
-                </div>
-              </Col>
-            </Row>
-          </Card>
-        </Accordion.Body>
-      </Accordion.Item>
-    </Accordion>
+              setIsTriangulatingPoints(!isTriangulatingPoints);
+              startLiveMocap(isTriangulatingPoints ? "stop" : "start");
+              }}
+          >
+              {isTriangulatingPoints ? "Stop" : "Start"}
+          </Button>
+        </Col>
+      </Row>
+      <Row>
+        <Col xs="auto">
+          <h4>Locate Objects</h4>
+        </Col>
+        <Col>
+          <Button
+            size='sm'
+            variant={isLocatingObjects ? "outline-danger" : "outline-primary"}
+            disabled={!cameraStreamRunning}
+            onClick={() => {
+              setIsLocatingObjects(!isLocatingObjects);
+              socket.emit("locate-objects", { startOrStop: isLocatingObjects ? "stop" : "start" });
+            }}
+          >
+            {isLocatingObjects ? "Stop" : "Start"}
+          </Button>
+        </Col>
+      </Row>
+      <Row>
+        <Col xs="auto">
+          <h4>Set Scale Using Points</h4>
+        </Col>
+        <Col>
+          <Button
+            size='sm'
+            variant="outline-primary"
+            disabled={!isTriangulatingPoints && objectPoints.current.length === 0}
+            onClick={() => {
+              socket.emit("determine-scale", { objectPoints: objectPoints.current, cameraPoses: cameraPoses });
+            }}
+          >
+            Run
+          </Button>
+        </Col>
+      </Row>
+      <Row>
+        <Col xs="auto">
+          <h4>Acquire Floor</h4>
+        </Col>
+        <Col>
+          <Button
+            size='sm'
+            variant="outline-primary"
+            disabled={!isTriangulatingPoints && objectPoints.current.length === 0}
+            onClick={() => {
+              socket.emit("acquire-floor", { objectPoints: objectPoints.current, oldMatrix: toWorldCoordsMatrix });
+            }}
+          >
+            Run
+          </Button>
+        </Col>
+      </Row>
+      <Row>
+        <Col xs="auto">
+          <h4>Set Origin</h4>
+        </Col>
+        <Col>
+          <Button
+            size='sm'
+            variant="outline-primary"
+            disabled={!isTriangulatingPoints && objectPoints.current.length === 0}
+            onClick={() => {
+              console.log(objectPoints.current[0][0])
+              socket.emit("set-origin", { objectPoint: objectPoints.current[0][0], toWorldCoordsMatrix });
+            }}
+          >
+            Run
+          </Button>
+        </Col>
+      </Row>
+      <Row>
+        <Col xs="auto">
+          <h4>Collect points for camera pose calibration</h4>
+        </Col>
+        <Col>
+          <Tooltip id="collect-points-for-pose-button-tooltip" />
+          <a data-tooltip-hidden={cameraStreamRunning} data-tooltip-variant='error' data-tooltip-id='collect-points-for-pose-button-tooltip' data-tooltip-content="Start camera stream first">
+            <Button
+              size='sm'
+              variant={capturingPointsForPose ? "outline-danger" : "outline-primary"}
+              disabled={!cameraStreamRunning}
+              onClick={() => {
+                setCapturingPointsForPose(!capturingPointsForPose);
+                capturePointsForPose(capturingPointsForPose ? "stop" : "start");
+              }}
+            >
+              {capturingPointsForPose ? "Stop" : "Start"}
+            </Button>
+          </a>
+        </Col>
+      </Row>
+      <Row className='pt-3'>
+        <Col>
+          <Button
+            size='sm'
+            className='float-end'
+            variant="outline-primary"
+            disabled={!(isValidJson(`[${capturedPointsForPose.slice(0, -1)}]`) && JSON.parse(`[${capturedPointsForPose.slice(0, -1)}]`).length !== 0)}
+            onClick={() => calculateCameraPose(JSON.parse(`[${capturedPointsForPose.slice(0, -1)}]`))}
+          >
+            Calculate Camera Pose with {isValidJson(`[${capturedPointsForPose.slice(0, -1)}]`) ? JSON.parse(`[${capturedPointsForPose.slice(0, -1)}]`).length : 0} points
+          </Button>
+        </Col>
+      </Row>
+      <Row className='pt-3'>
+        <Col xs={4} className='pt-2'>
+          Camera Poses:
+        </Col>
+        <Col>
+          <Form.Control
+            value={JSON.stringify(cameraPoses)}
+            onChange={handleCameraPosesChange}
+          />
+        </Col>
+      </Row>
+      <Row>
+        <Col xs={4} className='pt-2'>
+          To World Matrix:
+        </Col>
+        <Col>
+          <Form.Control
+            value={JSON.stringify(toWorldCoordsMatrix)}
+            onChange={(event) => setToWorldCoordsMatrix(JSON.parse(event.target.value))}
+          />
+        </Col>
+      </Row>
+      <Row>
+        <Col xs="auto">
+          <h4>Rotate Scene</h4>
+        </Col>
+        <Col>
+          <div className="d-flex justify-content-between">
+            <div>
+              <Button size='sm' variant="outline-primary" onClick={() => rotateScene('x', 1)}>Rotate X +1</Button>
+              <Button size='sm' variant="outline-primary" onClick={() => rotateScene('x', -1)}>Rotate X -1</Button>
+            </div>
+            <div>
+              <Button size='sm' variant="outline-primary" onClick={() => rotateScene('y', 1)}>Rotate Y +1</Button>
+              <Button size='sm' variant="outline-primary" onClick={() => rotateScene('y', -1)}>Rotate Y -1</Button>
+            </div>
+            <div>
+              <Button size='sm' variant="outline-primary" onClick={() => rotateScene('z', 1)}>Rotate Z +1</Button>
+              <Button size='sm' variant="outline-primary" onClick={() => rotateScene('z', -1)}>Rotate Z -1</Button>
+            </div>
+          </div>
+        </Col>
+      </Row>
+    </Card>
   );
 };
 

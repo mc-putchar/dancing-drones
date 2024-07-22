@@ -260,8 +260,13 @@ def acquire_floor(data):
 @socketio.on("set-origin")
 def set_origin(data):
     cameras = Cameras.instance()
+
     object_point = np.array(data["objectPoint"])
     to_world_coords_matrix = np.array(data["toWorldCoordsMatrix"])
+
+    print("Object Point:", object_point)  # Debugging print
+    print("To World Coords Matrix:", to_world_coords_matrix)  # Debugging print
+    
     transform_matrix = np.eye(4)
 
     object_point[1], object_point[2] = object_point[2], object_point[1] # i dont fucking know why

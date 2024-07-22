@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from 'react-bootstrap'; // Asegúrate de importar Card de react-bootstrap
+import { Card } from 'react-bootstrap';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import Points from '../components/Points';
@@ -9,6 +9,7 @@ import CameraWireframe from '../components/CameraWireframe';
 import CameraPosition from '../components/CameraPosition';
 
 interface SceneViewProps {
+  NUM_DRONES: number;
   cameraPoses: Array<object>;
   toWorldCoordsMatrix: number[][];
   cameraPositions: number[][];
@@ -22,6 +23,7 @@ interface SceneViewProps {
 
 const SceneView = (props: SceneViewProps) => {
   const {
+    NUM_DRONES,
     cameraPoses,
     toWorldCoordsMatrix,
     cameraPositions,
@@ -46,7 +48,7 @@ const SceneView = (props: SceneViewProps) => {
         ))}
         <Points objectPointsRef={objectPoints} objectPointErrorsRef={objectPointErrors} count={objectPointCount} />
         <Objects filteredObjectsRef={filteredObjects} count={objectPointCount} />
-        <TrajectoryPlanningSetpoints trajectoryPlanningSetpoints={trajectoryPlanningSetpoints} NUM_DRONES={2} />
+        <TrajectoryPlanningSetpoints trajectoryPlanningSetpoints={trajectoryPlanningSetpoints} NUM_DRONES={NUM_DRONES} />
         <OrbitControls />
         <axesHelper args={[0.2]} />
         <gridHelper args={[4, 4 * 10]} />

@@ -181,7 +181,7 @@ export default function Chart({filteredObjectsRef, droneSetpointHistoryRef, obje
   let chartRef = useRef<ChartJS<"line", number[], number> | null>(null);
 
   useEffect(() => {
-    console.log(filteredObjectsRef.current)
+    //console.log(filteredObjectsRef.current)
     let sliced = filteredObjectsRef.current.length <= 15 ? [] : filteredObjectsRef.current.slice(15)
     const length = sliced.length
     if (length === 0) {
