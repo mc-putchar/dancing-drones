@@ -90,7 +90,8 @@ class CameraCalibratorApp:
 	def __init__(self, root):
 		self.cams = None
 		self.num_cameras = 0
-		self.camera_params = None
+		self.camera_params = []
+		self.calibrated_cameras = set()
 		self.is_running = False
 		self.is_collecting = False
 		self.is_detecting = False
@@ -126,6 +127,13 @@ class CameraCalibratorApp:
 		self.output_button = ttk.Button(root, text="Output params", command=self.output_params, state=tk.DISABLED)
 		self.output_button.pack()
 
+		self.feedback_label = ttk.Label(root, text="Calibrated Cameras: None", anchor="w")
+		self.feedback_label.pack(fill=tk.X, padx=5, pady=5)
+
+		self.error_text = tk.Text(root, height=5, state=tk.DISABLED, wrap=tk.WORD)
+		self.error_text.pack(fill=tk.X, padx=5, pady=5)
+		self.error_text.grid_remove()
+
 		self.images_frame = ttk.Frame(root)
 		self.images_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -137,7 +145,8 @@ class CameraCalibratorApp:
 			self.is_running = True
 			self.cams = Camera(fps=90, resolution=Camera.RES_SMALL, exposure=100, gain=16)
 			self.num_cameras = len(self.cams.exposure)
-			self.camera_params = [0 for i in range(self.num_cameras)]
+			self.camera_params = [None for _ in range(self.num_cameras)]
+			self.calibrated_cameras = set()
 			self.camera_select['values'] = [f'Camera {i}' for i in range(self.num_cameras)]
 			self.camera_select.current(0)
 			self.collect_button.config(state=tk.NORMAL)
@@ -155,7 +164,7 @@ class CameraCalibratorApp:
 				self.video_label.imgtk = imgtk
 				self.video_label.configure(image=imgtk)
 			except Exception as e:
-				print(f"Error: {e}")
+				self.show_error(f"Error: {e}")
 				self.stop_camera()
 			self.video_label.after(10, self.update_frame)
 
@@ -168,6 +177,8 @@ class CameraCalibratorApp:
 			self.collect_button.config(state=tk.DISABLED)
 			self.detect_button.config(state=tk.DISABLED)
 			self.calibrate_button.config(state=tk.DISABLED)
+			self.camera_params = [None for _ in range(self.num_cameras)]
+			self.calibrated_cameras.clear()
 
 	def collect_samples(self):
 		if not self.is_collecting:
@@ -181,14 +192,15 @@ class CameraCalibratorApp:
 		try:
 			os.unlink(img_path)
 		except OSError as e:
-			print(f"Failed to delete {img_path}\n{e}")
+			self.show_error(f"Failed to delete {img_path}\n{e}")
 		else:
-			print(f"Deleted {img_path}")
+			self.show_error(f"Deleted {img_path}")
 			self.display_collected_images(os.path.dirname(img_path))
 
 	def _collect_samples(self, cam_index=0, n_samples=42, wait_between_frames=0.3):
 		img_dir = f"cam_{cam_index}"
 		if not ensure_directory(img_dir):
+			self.show_error("Error: failed to ensure collection directory")
 			return False
 		for i in range(n_samples):
 			frame, _ = self.cams.read(cam_index)
@@ -210,13 +222,11 @@ class CameraCalibratorApp:
 			if img_path.endswith(('.jpg', '.jpeg')):
 				img = Image.open(img_path)
 				imgtk = ImageTk.PhotoImage(img)
-
-				# Pass a lambda to bind the delete command with the image path
 				delete_command = lambda p=img_path: self.delete_image(p)
 				self.scrolled_frame.add_image(imgtk, row, col, delete_command)
 
 				col += 1
-				if col == 3:  # Adjust this value to fit your layout needs
+				if col == 4:  # TODO: dynamically scaled layout
 					col = 0
 					row += 2
 
@@ -235,6 +245,7 @@ class CameraCalibratorApp:
 		img_dir = f"cam_{cam_index}"
 		calibrated_dir = f"cam_{cam_index}_c"
 		if not ensure_directory(calibrated_dir):
+			self.show_error("Error: failed to ensure calibration directory")
 			return False
 		# Checkerboard dimensions
 		CHECKERBOARD = (5, 6)
@@ -277,18 +288,33 @@ class CameraCalibratorApp:
 			threading.Thread(target=self._calibrate_camera, args=(cam_index,)).start()
 
 	def _calibrate_camera(self, cam_index=0):
+		if not len(self.objpoints) or not len(self.imgpoints):
+			self.show_error("Error: Missing points for calibration")
+			return
 		calibrated_dir = f"cam_{cam_index}_c"
 		images = glob.glob(f"{calibrated_dir}/*.jpg")
 		if not images:
-			print("No samples to calibrate")
+			self.show_error("No samples to calibrate")
 			return
-		gray = cv.cvtColor(images[0], cv.COLOR_BGR2GRAY)
+		gray_shape = None
+		try:
+			first_img = cv.imread(images[0])
+			if first_img is None:
+				raise ValueError("Failed to read image")
+			gray = cv.cvtColor(first_img, cv.COLOR_BGR2GRAY)
+			gray_shape = gray.shape[::-1]
+		except Exception as e:
+			self.show_error(f"Error reading or processing images: {e}")
+			return
 
 		try:
-			ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(self.objpoints, self.imgpoints, gray.shape[::-1], None, None)
+			ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(self.objpoints, self.imgpoints, gray_shape, None, None)
+			if not ret:
+				raise ValueError("Calibration failed")
 		except Exception as e:
-			print(f"Error: {e}")
+			self.show_error(f"Error during calibration: {e}")
 			return
+
 		mtx = round_values(mtx)
 		dist = round_values(dist)
 		params = {
@@ -304,6 +330,22 @@ class CameraCalibratorApp:
 		self.objpoints = []
 		self.imgpoints = []
 		self.camera_params[cam_index] = params
+		self.calibrated_cameras.add(cam_index)
+		self.update_feedback()
+
+	def update_feedback(self):
+		calibrated_list = ', '.join([f'Camera {i}' for i in sorted(self.calibrated_cameras)])
+		if calibrated_list:
+			self.feedback_label.config(text=f"Calibrated Cameras: {calibrated_list}")
+		else:
+			self.feedback_label.config(text="Calibrated Cameras: None")
+
+	def show_error(self, message):
+		self.error_text.config(state=tk.NORMAL)
+		self.error_text.delete(1.0, tk.END)
+		self.error_text.insert(tk.END, message + '\n')
+		self.error_text.config(state=tk.DISABLED)
+		self.error_text.grid()
 
 	def output_params(self):
 		filename = "camera-params.json"
@@ -311,14 +353,24 @@ class CameraCalibratorApp:
 			try:
 				f = open(filename, 'w')
 			except OSError as e:
-				print(f"Failed to open {filename}\n{e}")
+				self.show_error(f"Failed to open {filename}\n{e}")
 			else:
 				with f as file:
 					json.dump(self.camera_params, file, indent=4)
+
+	def on_camera_change(self, event=None):
+		self.scrolled_frame.clear()
+		self.collect_button.config(state=tk.NORMAL)
+		self.detect_button.config(state=tk.DISABLED)
+		self.calibrate_button.config(state=tk.DISABLED)
+		self.output_button.config(state=tk.DISABLED)
+		self.objpoints = []
+		self.imgpoints = []
 
 
 if __name__ == "__main__":
 	root = tk.Tk()
 	app = CameraCalibratorApp(root)
 	root.protocol("WM_DELETE_WINDOW", app.stop_camera)
+	app.camera_select.bind("<<ComboboxSelected>>", app.on_camera_change)
 	root.mainloop()
