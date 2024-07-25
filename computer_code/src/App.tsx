@@ -23,7 +23,7 @@ import ControlPanel from './views/ControlPanel';
 import SceneView from './views/SceneView';
 import { Scene } from 'three';
 
-const NUM_DRONES = 2
+const NUM_DRONES = 1
 
 export default function App() {
   enum ControlView {
